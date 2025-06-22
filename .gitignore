@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv
+.pytest_cache/
+.coverage
+
+# Environment
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite3
+
+# OS
+.DS_Store

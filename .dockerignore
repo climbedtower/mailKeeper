@@ -1,0 +1,22 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.pytest_cache/
+.coverage
+
+# Environment
+.env
+.env.*
+
+# Editor settings
+.vscode/
+
+# OS
+.DS_Store

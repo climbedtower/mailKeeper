@@ -1,0 +1,15 @@
+{
+  // Pythonファイルに対する設定
+  "[python]": {
+    // 1. ファイル保存時に自動フォーマットを実行する
+    "editor.formatOnSave": true,
+    // 2. デフォルトのフォーマッターとして、Microsoft公式のPython拡張機能を指定
+    "editor.defaultFormatter": "ms-python.python"
+  },
+  // 3. Microsoft公式Python拡張機能に、フォーマットツールとして "ruff" を使うよう指示
+  "python.formatting.provider": "ruff",
+
+  // pytestをVS Codeのテスト機能と連携させる
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"]
+}

@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "pythonRepoTemplate"
+version = "0.1.0"
+description = "My personal Python project template"
+authors = ["Yn <personal@onacanocuy.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.0"
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
+pre-commit = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+# チェックするルールセット。E/Fはエラー、Wは警告、Iはimportの自動整理
+select = ["E", "F", "W", "I"]
+line-length = 88
+
+[tool.ruff.format]
+# RuffをBlack互換モードでフォーマッターとして使う設定
+quote-style = "double"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+# pytestの基本的な設定
+minversion = "6.0"
+addopts = "-ra -q"  # テスト結果をシンプルに表示するオプション
+testpaths = [
+    "tests",      # テストコードはtestsフォルダに置くルール
+]
+
+[tool.coverage.run]
+# テストカバレッジの計測対象を指定
+source = ["src"] # srcフォルダ内のコードを計測対象にする
+
+[tool.coverage.report]
+# テストカバレッジのレポート設定
+fail_under = 80 # カバレッジが80%未満ならエラーにする（CI用）
