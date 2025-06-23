@@ -1,0 +1,72 @@
+name: Claude review
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # src/ ディレクトリ配下のソースコード変更のみを抽出
+          git diff --name-only origin/${{ github.base_ref }}..HEAD | \\\
+          grep -E '(^src/)' > changed_files.txt || true
+
+          if [ -s changed_files.txt ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Review with Claude
+        if: steps.changed-files.outputs.has_changes == 'true'
+        env:
+          CLAUDE_MODEL_NAME: ${{ vars.CLAUDE_MODEL_NAME || 'claude-3-5-sonnet-20240620' }}
+        run: |
+          # 変更内容を取得
+          DIFF=$(git diff origin/${{ github.base_ref }}..HEAD -- $(cat changed_files.txt | tr '\\n' ' '))
+
+          # プロジェクトのルールを組み込んだプロンプトを生成
+          PROMPT="あなたはPythonエキスパートのペアプログラマーです。このプロジェクトはPoetry, Python 3.12+, Ruff, pytestを使用し、全てのコードはsrc/に配置されます。これらのルールに基づき、以下のコード変更をレビューし、改善提案を日本語で具体的に記述してください。\\n\\n\\`\\`\\`diff\\n$DIFF\\n\\`\\`\\`"
+
+          # 安全な方法でAPIリクエストのJSONをファイルに書き出す
+          jq -n \\
+            --arg model "$CLAUDE_MODEL_NAME" \\
+            --arg content "$PROMPT" \\
+            '{model: $model, max_tokens: 4096, messages: [{"role": "user", "content": $content}]}' > request.json
+
+          # Claude APIに送信し、レスポンスとHTTPステータスコードを取得
+          RESPONSE_DATA=$(curl -s -w "\\n%{http_code}" -X POST https://api.anthropic.com/v1/messages \\
+            -H "Content-Type: application/json" \\
+            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \\
+            -H "anthropic-version: 2023-06-01" \\
+            --data-binary @request.json)
+
+          HTTP_CODE=$(echo "$RESPONSE_DATA" | tail -n1)
+          RESPONSE_BODY=$(echo "$RESPONSE_DATA" | sed '$d')
+
+          # エラーハンドリング
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            REVIEW_CONTENT="Claude APIとの通信に失敗しました (HTTP Status: $HTTP_CODE)。\n\n\`\`\`\n$RESPONSE_BODY\n\`\`\`"
+          else
+            REVIEW_CONTENT=$(echo "$RESPONSE_BODY" | jq -r '.content[0].text')
+          fi
+
+          # 安全な方法でPRコメントのJSONをファイルに書き出す
+          jq -n --arg body "## 🤖 Claude Code Review\n\n$REVIEW_CONTENT" '{body: $body}' > comment.json
+
+          # PRにコメントを投稿
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --data-binary @comment.json
