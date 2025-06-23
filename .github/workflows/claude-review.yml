@@ -17,9 +17,9 @@ jobs:
       - name: Get changed files
         id: changed-files
         run: |
-          # 一般的なテスト、ドキュメント、設定ファイルを除外し、ソースコードと思われる変更を抽出
-          git diff --name-only origin/${{ github.base_ref }}..HEAD | \
-          grep -v -E '(^tests?/|^test/|^docs?/|^doc/|\.md$|Pipfile|poetry\.lock|pyproject\.toml)' > changed_files.txt || true
+          # src/ ディレクトリ配下のソースコード変更のみを抽出
+          git diff --name-only origin/${{ github.base_ref }}..HEAD | \\\
+          grep -E '(^src/)' > changed_files.txt || true
 
           if [ -s changed_files.txt ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -29,24 +29,26 @@ jobs:
 
       - name: Review with Claude
         if: steps.changed-files.outputs.has_changes == 'true'
+        env:
+          CLAUDE_MODEL_NAME: ${{ vars.CLAUDE_MODEL_NAME || 'claude-3-5-sonnet-20240620' }}
         run: |
           # 変更内容を取得
-          DIFF=$(git diff origin/${{ github.base_ref }}..HEAD -- $(cat changed_files.txt | tr '\n' ' '))
+          DIFF=$(git diff origin/${{ github.base_ref }}..HEAD -- $(cat changed_files.txt | tr '\\n' ' '))
 
-          # 汎用的なプロンプトを生成
-          PROMPT="あなたは多言語に対応できる経験豊富なソフトウェアエンジニアです。以下のコード変更の言語を特定し、その言語のベストプラクティス（コーディング規約、効率性、可読性など）に基づいてレビューし、改善提案を日本語でください。\n\n\`\`\`diff\n$DIFF\n\`\`\`"
+          # プロジェクトのルールを組み込んだプロンプトを生成
+          PROMPT="あなたはPythonエキスパートのペアプログラマーです。このプロジェクトはPoetry, Python 3.12+, Ruff, pytestを使用し、全てのコードはsrc/に配置されます。これらのルールに基づき、以下のコード変更をレビューし、改善提案を日本語で具体的に記述してください。\\n\\n\\`\\`\\`diff\\n$DIFF\\n\\`\\`\\`"
 
           # 安全な方法でAPIリクエストのJSONをファイルに書き出す
-          jq -n \
-            --arg model "claude-3-5-sonnet-20241022" \
-            --arg content "$PROMPT" \
-            '{model: $model, max_tokens: 1500, messages: [{"role": "user", "content": $content}]}' > request.json
+          jq -n \\
+            --arg model "$CLAUDE_MODEL_NAME" \\
+            --arg content "$PROMPT" \\
+            '{model: $model, max_tokens: 4096, messages: [{"role": "user", "content": $content}]}' > request.json
 
           # Claude APIに送信し、レスポンスとHTTPステータスコードを取得
-          RESPONSE_DATA=$(curl -s -w "\n%{http_code}" -X POST https://api.anthropic.com/v1/messages \
-            -H "Content-Type: application/json" \
-            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
-            -H "anthropic-version: 2023-06-01" \
+          RESPONSE_DATA=$(curl -s -w "\\n%{http_code}" -X POST https://api.anthropic.com/v1/messages \\
+            -H "Content-Type: application/json" \\
+            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \\
+            -H "anthropic-version: 2023-06-01" \\
             --data-binary @request.json)
 
           HTTP_CODE=$(echo "$RESPONSE_DATA" | tail -n1)

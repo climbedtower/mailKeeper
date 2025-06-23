@@ -11,12 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1) キュー（step,queued ラベル付き）の最上位 Issue を取得
+      # 1) キュー（step,todo ラベル付き）の最上位 Issue を取得
       - name: Pick next queued Issue
         id: next
         run: |
           ISSUE=$(gh issue list \
-                  --label step,queued \
+                  --label step,todo \
                   --state open \
                   --sort created \
                   --json number \
@@ -31,7 +31,7 @@ jobs:
         run: |
           gh issue edit "${{ steps.next.outputs.issue }}" \
             --add-assignee github-copilot \
-            --remove-label queued \
-            --add-label in-progress
+            --remove-label todo \
+            --add-label doing
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

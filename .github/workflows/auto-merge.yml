@@ -1,15 +1,20 @@
-name: Auto-merge when checks pass
+name: Auto Merge
+
 on:
-  pull_request:
-    types: [labeled, reopened, synchronize]   # 「automerge」ラベルが付く／更新されるたび
+  pull_request_target:
+    types: [labeled, unlabeled, synchronize]
 
 jobs:
-  enable:
-    if: github.event.label.name == 'automerge'   # automerge ラベルが付いた時だけ実行
+  auto-merge:
     runs-on: ubuntu-latest
-    permissions: write-all                       # PR 設定を変更する権限
+    if: contains(github.event.pull_request.labels.*.name, 'automerge')
+    permissions:
+      pull-requests: write
+      contents: write
     steps:
-      - uses: peter-evans/enable-pull-request-automerge@v3
+      - name: Enable auto-merge
+        uses: peter-evans/enable-pull-request-automerge@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ github.event.pull_request.number }}
-          merge-method: squash                   # 必要に応じて merge / rebase に変更
+          merge-method: ${{ vars.AUTO_MERGE_METHOD || 'squash' }}
