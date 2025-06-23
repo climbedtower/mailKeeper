@@ -1,4 +1,0 @@
-# steps.csv
-id,title,body
-0.1,Scrapboxデータ取得テスト,⚠️ Copilot Guidelines\n- Only modify DoOne/**\n\n- Scrapbox REST API `/text` エンドポイントのテスト\n- 実際のScrapboxページからのデータ取得確認\n- NOW/NEXT/SOMEDAY/IDEA形式のページ作成\n- APIレスポンスの構造確認\n\n**完了条件**\n- Scrapbox APIから正常にテキストデータを取得できる\n- 想定するページ形式でのレスポンスを確認済み
-1.1,Xcodeプロジェクト作成,⚠️ Copilot Guidelines\n- Only modify DoOne/**\n\n- macOS App（SwiftUI または Storyboard）でプロジェクト作成\n- WebKit.framework を追加\n- Bundle Identifier設定\n\n**完了条件**\n- プロジェクトが起動する\n- WebKitが利用可能
